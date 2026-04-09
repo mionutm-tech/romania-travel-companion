@@ -126,6 +126,9 @@ create table public.poi_tags (
 
 alter table public.poi_tags enable row level security;
 create policy "Tags are publicly readable" on public.poi_tags for select using (true);
+create policy "Admins can manage tags" on public.poi_tags for all using (
+  exists (select 1 from public.users where id = auth.uid() and role = 'admin')
+);
 
 create table public.poi_tag_links (
   poi_id uuid not null references public.pois(id) on delete cascade,
