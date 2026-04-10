@@ -8,7 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { slugify } from "@/lib/utils";
-import type { POI } from "@/types/database";
+import type {
+  POI,
+  PublishStatus,
+  DataQualityStatus,
+  BestTimeOfDay,
+} from "@/types/database";
 
 interface Props {
   poi?: POI;
@@ -19,6 +24,7 @@ interface Props {
 export function AdminPOIForm({ poi, destinations, categories }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(poi?.name || "");
   const [slug, setSlug] = useState(poi?.slug || "");
   const [destinationId, setDestinationId] = useState(
@@ -28,6 +34,9 @@ export function AdminPOIForm({ poi, destinations, categories }: Props) {
     poi?.category_id || categories[0]?.id || ""
   );
   const [description, setDescription] = useState(poi?.description || "");
+  const [shortDescription, setShortDescription] = useState(
+    poi?.short_description || ""
+  );
   const [address, setAddress] = useState(poi?.address || "");
   const [lat, setLat] = useState(poi?.lat?.toString() || "");
   const [lng, setLng] = useState(poi?.lng?.toString() || "");
@@ -36,9 +45,34 @@ export function AdminPOIForm({ poi, destinations, categories }: Props) {
   const [websiteUrl, setWebsiteUrl] = useState(poi?.website_url || "");
   const [phone, setPhone] = useState(poi?.phone || "");
 
+  const [durationMinutes, setDurationMinutes] = useState(
+    poi?.duration_minutes?.toString() || "60"
+  );
+  const [priceLevel, setPriceLevel] = useState(
+    poi?.price_level?.toString() || "0"
+  );
+  const [familyFriendly, setFamilyFriendly] = useState(
+    poi?.family_friendly ?? true
+  );
+  const [indoor, setIndoor] = useState(poi?.indoor ?? false);
+  const [accessible, setAccessible] = useState(poi?.accessible ?? false);
+  const [featuredScore, setFeaturedScore] = useState(
+    poi?.featured_score?.toString() || "0"
+  );
+  const [bestTimeOfDay, setBestTimeOfDay] = useState<BestTimeOfDay>(
+    poi?.best_time_of_day || "any"
+  );
+  const [publishStatus, setPublishStatus] = useState<PublishStatus>(
+    poi?.publish_status || "draft"
+  );
+  const [dataQualityStatus, setDataQualityStatus] = useState<DataQualityStatus>(
+    poi?.data_quality_status || "raw"
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     const supabase = createClient();
     const payload = {
@@ -47,6 +81,7 @@ export function AdminPOIForm({ poi, destinations, categories }: Props) {
       destination_id: destinationId,
       category_id: categoryId,
       description: description || null,
+      short_description: shortDescription || null,
       address: address || null,
       lat: parseFloat(lat),
       lng: parseFloat(lng),
@@ -54,12 +89,25 @@ export function AdminPOIForm({ poi, destinations, categories }: Props) {
       rating: rating ? parseFloat(rating) : null,
       website_url: websiteUrl || null,
       phone: phone || null,
+      duration_minutes: parseInt(durationMinutes) || 60,
+      price_level: parseInt(priceLevel) || 0,
+      family_friendly: familyFriendly,
+      indoor,
+      accessible,
+      featured_score: parseInt(featuredScore) || 0,
+      best_time_of_day: bestTimeOfDay,
+      publish_status: publishStatus,
+      data_quality_status: dataQualityStatus,
     };
 
-    if (poi) {
-      await supabase.from("pois").update(payload).eq("id", poi.id);
-    } else {
-      await supabase.from("pois").insert(payload);
+    const { error: dbError } = poi
+      ? await supabase.from("pois").update(payload).eq("id", poi.id)
+      : await supabase.from("pois").insert(payload);
+
+    if (dbError) {
+      setError(dbError.message);
+      setLoading(false);
+      return;
     }
 
     router.push("/admin/pois");
@@ -69,7 +117,7 @@ export function AdminPOIForm({ poi, destinations, categories }: Props) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-w-lg space-y-4 rounded-xl border border-border/40 bg-card p-6"
+      className="max-w-2xl space-y-4 rounded-xl border border-border/40 bg-card p-6"
     >
       <div>
         <Label htmlFor="name">Name</Label>
@@ -127,12 +175,22 @@ export function AdminPOIForm({ poi, destinations, categories }: Props) {
         </div>
       </div>
       <div>
+        <Label htmlFor="short_description">Short description (1 line)</Label>
+        <Input
+          id="short_description"
+          value={shortDescription}
+          onChange={(e) => setShortDescription(e.target.value)}
+          maxLength={200}
+          className="mt-1.5"
+        />
+      </div>
+      <div>
         <Label htmlFor="description">Description</Label>
         <textarea
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          rows={3}
+          rows={4}
           className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
       </div>
@@ -213,6 +271,145 @@ export function AdminPOIForm({ poi, destinations, categories }: Props) {
           />
         </div>
       </div>
+
+      <div className="border-t border-border/40 pt-4">
+        <h3 className="font-semibold text-forest mb-3">Planner attributes</h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="duration_minutes">Duration (minutes)</Label>
+            <Input
+              id="duration_minutes"
+              type="number"
+              min="5"
+              max="600"
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(e.target.value)}
+              className="mt-1.5"
+            />
+          </div>
+          <div>
+            <Label htmlFor="price_level">Price level (0-4)</Label>
+            <Input
+              id="price_level"
+              type="number"
+              min="0"
+              max="4"
+              value={priceLevel}
+              onChange={(e) => setPriceLevel(e.target.value)}
+              className="mt-1.5"
+            />
+          </div>
+          <div>
+            <Label htmlFor="featured_score">Featured score (0-100)</Label>
+            <Input
+              id="featured_score"
+              type="number"
+              min="0"
+              max="100"
+              value={featuredScore}
+              onChange={(e) => setFeaturedScore(e.target.value)}
+              className="mt-1.5"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div>
+            <Label htmlFor="best_time_of_day">Best time of day</Label>
+            <select
+              id="best_time_of_day"
+              value={bestTimeOfDay}
+              onChange={(e) =>
+                setBestTimeOfDay(e.target.value as BestTimeOfDay)
+              }
+              className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              {(
+                [
+                  "any",
+                  "morning",
+                  "midday",
+                  "afternoon",
+                  "evening",
+                  "night",
+                ] as BestTimeOfDay[]
+              ).map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-wrap items-end gap-3 pb-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={familyFriendly}
+                onChange={(e) => setFamilyFriendly(e.target.checked)}
+              />
+              Family friendly
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={indoor}
+                onChange={(e) => setIndoor(e.target.checked)}
+              />
+              Indoor
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={accessible}
+                onChange={(e) => setAccessible(e.target.checked)}
+              />
+              Accessible
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-border/40 pt-4">
+        <h3 className="font-semibold text-forest mb-3">Lifecycle</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="publish_status">Publish status</Label>
+            <select
+              id="publish_status"
+              value={publishStatus}
+              onChange={(e) =>
+                setPublishStatus(e.target.value as PublishStatus)
+              }
+              className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="draft">draft</option>
+              <option value="review">review</option>
+              <option value="published">published</option>
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="data_quality_status">Data quality</Label>
+            <select
+              id="data_quality_status"
+              value={dataQualityStatus}
+              onChange={(e) =>
+                setDataQualityStatus(e.target.value as DataQualityStatus)
+              }
+              className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="raw">raw</option>
+              <option value="enriched">enriched</option>
+              <option value="reviewed">reviewed</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 rounded-md p-2">
+          {error}
+        </p>
+      )}
+
       <Button
         type="submit"
         disabled={loading}

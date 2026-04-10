@@ -1,0 +1,4 @@
+name,destination_slug,category_slug,lat,lng,description,short_description,address,duration_minutes,price_level,family_friendly,indoor,accessible,featured_score,best_time_of_day,rating
+Cărturești Carusel,bucharest,attraction,44.4319,26.1027,"Stunning bookshop in a 19th-century building with curved white balconies.","Beautiful 19th-century bookshop","Strada Lipscani 55",60,1,true,true,true,70,afternoon,4.7
+Therme București,bucharest,attraction,44.5683,26.0860,"Europe's largest wellness center with thermal pools palms and saunas.","Europe's largest wellness center","Calea București 1F",240,3,true,true,true,80,midday,4.6
+Bunloc Ski Slope,brasov,outdoor,45.6122,25.6303,"Quiet ski slope south of Brașov suitable for beginners and intermediates.","Beginner-friendly ski slope","Săcele",180,2,true,false,false,40,morning,4.2

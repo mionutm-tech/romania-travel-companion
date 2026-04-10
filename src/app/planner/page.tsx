@@ -6,7 +6,7 @@ import { PlannerClient } from "./planner-client";
 export const metadata: Metadata = {
   title: "Trip Planner",
   description:
-    "Plan your Romanian adventure. Select your interests, dates, and destinations to get a personalized itinerary.",
+    "Plan your Romanian adventure. Select your interests, budget, and pace to get a personalized itinerary.",
 };
 
 export default async function PlannerPage() {
@@ -21,7 +21,7 @@ export default async function PlannerPage() {
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
       <PageHeader
         title="Trip Planner"
-        description="Tell us what you love, and we'll suggest the perfect Romanian itinerary for you."
+        description="Tell us your interests, pace, and budget — we'll plan a day-by-day Romanian itinerary."
       />
       <PlannerClient
         destinations={destinations || []}
