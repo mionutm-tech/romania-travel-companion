@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { slugify } from "@/lib/utils";
 import type {
   POI,
@@ -14,6 +14,7 @@ import type {
   DataQualityStatus,
   BestTimeOfDay,
 } from "@/types/database";
+import type { PoiDraft } from "@/lib/ai/poi-prompt";
 
 interface Props {
   poi?: POI;
@@ -68,6 +69,62 @@ export function AdminPOIForm({ poi, destinations, categories }: Props) {
   const [dataQualityStatus, setDataQualityStatus] = useState<DataQualityStatus>(
     poi?.data_quality_status || "raw"
   );
+
+  // AI draft assistant state. The panel only shows after a successful
+  // /generate-draft call. Applying a suggestion only updates form
+  // state — the admin still has to click Update POI to persist.
+  const [aiDraft, setAiDraft] = useState<PoiDraft | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  const canGenerate = name.trim() !== "" && destinationId !== "" && categoryId !== "";
+
+  const handleGenerateDraft = async () => {
+    if (!canGenerate) {
+      setAiError("Name, destination, and category are required.");
+      return;
+    }
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const res = await fetch(`/api/pois/generate-draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          destination_id: destinationId,
+          category_id: categoryId,
+          address: address || null,
+          duration_minutes: parseInt(durationMinutes) || null,
+          price_level: parseInt(priceLevel) || 0,
+          family_friendly: familyFriendly,
+          indoor,
+          accessible,
+          poi_id: poi?.id,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        const issueText = json.issues
+          ? `: ${json.issues
+              .map(
+                (i: { path: (string | number)[]; message: string }) =>
+                  `${i.path.join(".")} ${i.message}`
+              )
+              .join("; ")}`
+          : "";
+        setAiError(
+          `${json.error || `Request failed (${res.status})`}${issueText}`
+        );
+        return;
+      }
+      setAiDraft(json.draft as PoiDraft);
+    } catch (e) {
+      setAiError((e as Error).message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -369,6 +426,87 @@ export function AdminPOIForm({ poi, destinations, categories }: Props) {
       </div>
 
       <div className="border-t border-border/40 pt-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-forest">AI draft assistant</h3>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleGenerateDraft}
+            disabled={aiLoading || !canGenerate}
+          >
+            {aiLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 h-4 w-4" />
+            )}
+            Generate draft
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground mb-2">
+          Fill in name, destination, and category first. Then Claude
+          will draft a suggested set of editorial values from those
+          inputs. Suggestions are <strong>never auto-applied</strong> —
+          click <em>Apply</em> on each field you want, then save.
+        </p>
+          {aiError && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-md p-2 mb-2">
+              {aiError}
+            </p>
+          )}
+          {aiDraft && (
+            <div className="space-y-3 rounded-md border border-border/40 bg-muted/30 p-3">
+              <DraftField
+                label="Short description"
+                value={aiDraft.short_description}
+                onApply={() => setShortDescription(aiDraft.short_description)}
+              />
+              <DraftField
+                label="Long description"
+                value={aiDraft.long_description}
+                onApply={() => setDescription(aiDraft.long_description)}
+                multiline
+              />
+              <DraftField
+                label="Best time of day"
+                value={aiDraft.best_time_of_day}
+                onApply={() =>
+                  setBestTimeOfDay(aiDraft.best_time_of_day as BestTimeOfDay)
+                }
+              />
+              <DraftField
+                label="Suggested duration (min)"
+                value={String(aiDraft.suggested_duration_minutes)}
+                onApply={() =>
+                  setDurationMinutes(String(aiDraft.suggested_duration_minutes))
+                }
+              />
+              <DraftField
+                label="Suggested tags"
+                value={aiDraft.suggested_tags.join(", ")}
+                hint="Reference only — no matching POI field yet."
+              />
+              <DraftField
+                label="Editorial summary"
+                value={aiDraft.editorial_summary}
+                hint="Internal note from the model. Reference only."
+                multiline
+              />
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAiDraft(null)}
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          )}
+      </div>
+
+      <div className="border-t border-border/40 pt-4">
         <h3 className="font-semibold text-forest mb-3">Lifecycle</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -419,5 +557,50 @@ export function AdminPOIForm({ poi, destinations, categories }: Props) {
         {poi ? "Update" : "Create"} POI
       </Button>
     </form>
+  );
+}
+
+function DraftField({
+  label,
+  value,
+  onApply,
+  hint,
+  multiline,
+}: {
+  label: string;
+  value: string;
+  onApply?: () => void;
+  hint?: string;
+  multiline?: boolean;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </span>
+        {onApply && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={onApply}
+          >
+            Apply
+          </Button>
+        )}
+      </div>
+      <p
+        className={`text-sm text-foreground whitespace-pre-wrap ${
+          multiline ? "" : ""
+        }`}
+      >
+        {value}
+      </p>
+      {hint && (
+        <p className="text-xs text-muted-foreground mt-1 italic">{hint}</p>
+      )}
+    </div>
   );
 }

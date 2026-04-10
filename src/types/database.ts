@@ -225,7 +225,7 @@ export interface ImportRow {
 // POI drafts
 // ============================================
 
-export type DraftField = "description" | "short_description";
+export type DraftField = "description" | "short_description" | "ai_bundle";
 export type DraftStatus = "pending" | "approved" | "rejected";
 
 export interface POIDraft {
