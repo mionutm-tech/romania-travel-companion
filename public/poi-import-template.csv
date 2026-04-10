@@ -1,0 +1,2 @@
+name,destination_slug,category_slug,lat,lng,slug,short_description,description,address,hero_image_url,rating,website_url,phone,duration_minutes,price_level,family_friendly,indoor,accessible,featured_score,best_time_of_day
+Example POI,bucharest,museums-culture,44.4319,26.1027,example-poi,One-line summary shown in cards,"Longer description shown on the POI page. Quotes around text containing commas.","Strada Example 1, Bucharest",https://example.com/image.jpg,4.5,https://example.com,+40 21 000 0000,90,2,true,true,true,60,morning
