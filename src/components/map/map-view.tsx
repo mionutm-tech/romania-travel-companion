@@ -74,19 +74,29 @@ export function MapView({
       const color =
         CATEGORY_COLORS[poi.category?.slug || ""] || "#1a2f23";
 
+      // Mapbox sets `transform: translate(x, y)` on the outer element
+      // to position the marker, so we put our visual circle in an
+      // inner child and apply the hover scale to the child only —
+      // otherwise the scale() overwrites the translate() and the
+      // marker jumps to the top-left of the map.
       const el = document.createElement("div");
       el.className = "map-marker";
-      el.style.cssText = `
-        width: 28px; height: 28px; border-radius: 50%;
+      el.style.cssText = `width: 28px; height: 28px; cursor: pointer;`;
+
+      const inner = document.createElement("div");
+      inner.style.cssText = `
+        width: 100%; height: 100%; border-radius: 50%;
         background: ${color}; border: 3px solid white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2); cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         transition: transform 0.2s;
       `;
+      el.appendChild(inner);
+
       el.addEventListener("mouseenter", () => {
-        el.style.transform = "scale(1.2)";
+        inner.style.transform = "scale(1.2)";
       });
       el.addEventListener("mouseleave", () => {
-        el.style.transform = "scale(1)";
+        inner.style.transform = "scale(1)";
       });
 
       const popup = new mapboxgl.Popup({
