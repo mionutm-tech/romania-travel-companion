@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +16,7 @@ export function AdminDestinationForm({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(destination?.name || "");
   const [slug, setSlug] = useState(destination?.slug || "");
   const [description, setDescription] = useState(
@@ -31,8 +31,8 @@ export function AdminDestinationForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
-    const supabase = createClient();
     const payload = {
       name,
       slug: slug || slugify(name),
@@ -42,13 +42,27 @@ export function AdminDestinationForm({
       lng: parseFloat(lng),
     };
 
-    if (destination) {
-      await supabase
-        .from("destinations")
-        .update(payload)
-        .eq("id", destination.id);
-    } else {
-      await supabase.from("destinations").insert(payload);
+    const url = destination
+      ? `/api/destinations/${destination.id}`
+      : `/api/destinations`;
+    const method = destination ? "PATCH" : "POST";
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setError(json.error || `Request failed (${res.status})`);
+        setLoading(false);
+        return;
+      }
+    } catch (e) {
+      setError((e as Error).message || "Unknown error");
+      setLoading(false);
+      return;
     }
 
     router.push("/admin/destinations");
@@ -129,6 +143,11 @@ export function AdminDestinationForm({
           />
         </div>
       </div>
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 rounded-md p-2">
+          {error}
+        </p>
+      )}
       <Button
         type="submit"
         disabled={loading}
