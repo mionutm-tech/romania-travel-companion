@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -131,7 +130,6 @@ export function AdminPOIForm({ poi, destinations, categories }: Props) {
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
     const payload = {
       name,
       slug: slug || slugify(name),
@@ -157,12 +155,23 @@ export function AdminPOIForm({ poi, destinations, categories }: Props) {
       data_quality_status: dataQualityStatus,
     };
 
-    const { error: dbError } = poi
-      ? await supabase.from("pois").update(payload).eq("id", poi.id)
-      : await supabase.from("pois").insert(payload);
+    const url = poi ? `/api/pois/${poi.id}` : `/api/pois`;
+    const method = poi ? "PATCH" : "POST";
 
-    if (dbError) {
-      setError(dbError.message);
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setError(json.error || `Request failed (${res.status})`);
+        setLoading(false);
+        return;
+      }
+    } catch (e) {
+      setError((e as Error).message || "Unknown error");
       setLoading(false);
       return;
     }
