@@ -40,8 +40,7 @@ export function HeroSection() {
             <Link href="/itineraries">
               <Button
                 size="lg"
-                variant="outline"
-                className="border-cream/20 text-cream hover:bg-cream/10 px-6"
+                className="gold-gradient text-forest font-semibold border-0 hover:opacity-90 px-6"
               >
                 <Route className="mr-2 h-4 w-4" />
                 Browse Itineraries
