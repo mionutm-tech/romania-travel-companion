@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { createClient } from "@/lib/supabase/server";
+import type { User } from "@/types/database";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -37,18 +39,48 @@ export const metadata: Metadata = {
   ],
 };
 
-export default function RootLayout({
+async function getInitialUser(): Promise<User | null> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    if (!authUser) return null;
+
+    const { data } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", authUser.id)
+      .maybeSingle();
+    if (data) return data as User;
+
+    return {
+      id: authUser.id,
+      email: authUser.email ?? "",
+      name: (authUser.user_metadata?.name as string | undefined) ?? null,
+      avatar_url:
+        (authUser.user_metadata?.avatar_url as string | undefined) ?? null,
+      role: "user",
+      created_at: authUser.created_at ?? new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialUser = await getInitialUser();
   return (
     <html
       lang="en"
       className={`${playfair.variable} ${dmSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AuthProvider>
+        <AuthProvider initialUser={initialUser}>
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />

@@ -45,32 +45,23 @@ async function loadProfile(
   return fallbackUser(authUser);
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+export function AuthProvider({
+  children,
+  initialUser = null,
+}: {
+  children: React.ReactNode;
+  initialUser?: User | null;
+}) {
+  const [user, setUser] = useState<User | null>(initialUser);
+  const [loading, setLoading] = useState(false);
   const [supabase] = useState(() => createClient());
 
   useEffect(() => {
+    setUser(initialUser);
+  }, [initialUser?.id, initialUser?.role, initialUser?.name, initialUser?.avatar_url]);
+
+  useEffect(() => {
     let cancelled = false;
-
-    const init = async () => {
-      try {
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser();
-        if (cancelled) return;
-        if (authUser) {
-          const profile = await loadProfile(supabase, authUser);
-          if (!cancelled) setUser(profile);
-        }
-      } catch (err) {
-        console.error("auth init failed", err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    init();
 
     const {
       data: { subscription },
@@ -94,8 +85,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await fetch("/api/auth/signout", { method: "POST" });
     setUser(null);
+    if (typeof window !== "undefined") window.location.assign("/");
   };
 
   return (
