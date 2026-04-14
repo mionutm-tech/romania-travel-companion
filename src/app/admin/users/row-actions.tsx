@@ -57,7 +57,12 @@ export function UserRowActions({ id, role, disabled, confirmed, isSelf }: Props)
     );
   }
 
-  const btn = (key: string, label: string, onClick: () => void, variant: "ghost" | "outline" = "ghost") => (
+  const btn = (
+    key: string,
+    label: string,
+    onClick: () => void,
+    variant: "ghost" | "outline" | "destructive" = "ghost"
+  ) => (
     <Button
       key={key}
       size="sm"
@@ -131,6 +136,22 @@ export function UserRowActions({ id, role, disabled, confirmed, isSelf }: Props)
             }
           ),
         "outline"
+      )}
+      {btn(
+        "delete",
+        "Delete",
+        () =>
+          run(
+            "delete",
+            `/api/admin/users/${id}`,
+            { method: "DELETE" },
+            {
+              confirmMsg:
+                "Permanently delete this user? Their account will be removed and they can sign up again with the same email.",
+              successMsg: "User deleted",
+            }
+          ),
+        "destructive"
       )}
       {toast && (
         <span className="ml-2 self-center rounded-md bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">

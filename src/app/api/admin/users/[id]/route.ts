@@ -38,3 +38,27 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const ctx = await requireAdmin();
+  if (isErrorResponse(ctx)) return ctx;
+  const { adminClient, user } = ctx;
+
+  const { id } = await params;
+  if (id === user.id) {
+    return NextResponse.json(
+      { error: "You can't delete your own account" },
+      { status: 400 }
+    );
+  }
+
+  const { error } = await adminClient.auth.admin.deleteUser(id);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
