@@ -20,7 +20,7 @@ export async function POST(
 
   const origin = new URL(request.url).origin;
   const { error } = await adminClient.auth.resetPasswordForEmail(target.user.email, {
-    redirectTo: `${origin}/auth/confirm?next=/account`,
+    redirectTo: `${origin}/auth/confirm?next=/auth/reset-password`,
   });
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -17,16 +17,18 @@ export function UserRowActions({ id, role, disabled, confirmed, isSelf }: Props)
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const run = async (
     key: string,
     url: string,
     init: RequestInit,
-    confirmMsg?: string
+    opts?: { confirmMsg?: string; successMsg?: string }
   ) => {
-    if (confirmMsg && !window.confirm(confirmMsg)) return;
+    if (opts?.confirmMsg && !window.confirm(opts.confirmMsg)) return;
     setBusy(key);
     setError(null);
+    setToast(null);
     const res = await fetch(url, {
       headers: { "Content-Type": "application/json" },
       ...init,
@@ -36,6 +38,10 @@ export function UserRowActions({ id, role, disabled, confirmed, isSelf }: Props)
     if (!res.ok) {
       setError(payload.error ?? "Action failed");
       return;
+    }
+    if (opts?.successMsg) {
+      setToast(opts.successMsg);
+      setTimeout(() => setToast(null), 3500);
     }
     router.refresh();
   };
@@ -79,21 +85,32 @@ export function UserRowActions({ id, role, disabled, confirmed, isSelf }: Props)
                 role: role === "admin" ? "user" : "admin",
               }),
             },
-            role === "admin"
-              ? "Demote this admin to a regular user?"
-              : "Promote this user to admin?"
+            {
+              confirmMsg:
+                role === "admin"
+                  ? "Demote this admin to a regular user?"
+                  : "Promote this user to admin?",
+              successMsg:
+                role === "admin" ? "Demoted to user" : "Promoted to admin",
+            }
           )
       )}
       {btn("reset", "Reset pw", () =>
-        run("reset", `/api/admin/users/${id}/reset-password`, {
-          method: "POST",
-        })
+        run(
+          "reset",
+          `/api/admin/users/${id}/reset-password`,
+          { method: "POST" },
+          { successMsg: "Password reset email sent" }
+        )
       )}
       {!confirmed &&
         btn("resend", "Resend confirm", () =>
-          run("resend", `/api/admin/users/${id}/resend-confirmation`, {
-            method: "POST",
-          })
+          run(
+            "resend",
+            `/api/admin/users/${id}/resend-confirmation`,
+            { method: "POST" },
+            { successMsg: "Confirmation email sent" }
+          )
         )}
       {btn(
         "disable",
@@ -106,13 +123,26 @@ export function UserRowActions({ id, role, disabled, confirmed, isSelf }: Props)
               method: "PATCH",
               body: JSON.stringify({ disabled: !disabled }),
             },
-            disabled ? undefined : "Disable this user? They won't be able to use the app."
+            {
+              confirmMsg: disabled
+                ? undefined
+                : "Disable this user? They won't be able to use the app.",
+              successMsg: disabled ? "User enabled" : "User disabled",
+            }
           ),
         "outline"
       )}
+      {toast && (
+        <span className="ml-2 self-center rounded-md bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+          {toast}
+        </span>
+      )}
       {error && (
-        <span className="ml-2 text-xs text-red-600" title={error}>
-          {error.slice(0, 30)}
+        <span
+          className="ml-2 self-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600"
+          title={error}
+        >
+          {error.slice(0, 40)}
         </span>
       )}
     </div>
