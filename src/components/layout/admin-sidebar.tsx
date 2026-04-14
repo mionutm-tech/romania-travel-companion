@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, MapPin, Landmark, Route } from "lucide-react";
+import { LayoutDashboard, MapPin, Landmark, Route, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -10,6 +10,7 @@ const links = [
   { href: "/admin/destinations", label: "Destinations", icon: MapPin },
   { href: "/admin/pois", label: "POIs", icon: Landmark },
   { href: "/admin/itineraries", label: "Itineraries", icon: Route },
+  { href: "/admin/users", label: "Users", icon: Users },
 ];
 
 export function AdminSidebar() {

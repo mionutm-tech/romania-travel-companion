@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, Landmark, Route, Users } from "lucide-react";
@@ -18,10 +19,10 @@ export default async function AdminPage() {
   ]);
 
   const stats = [
-    { label: "Destinations", count: destCount || 0, icon: MapPin },
-    { label: "POIs", count: poiCount || 0, icon: Landmark },
-    { label: "Itineraries", count: itinCount || 0, icon: Route },
-    { label: "Users", count: userCount || 0, icon: Users },
+    { label: "Destinations", count: destCount || 0, icon: MapPin, href: "/admin/destinations" },
+    { label: "POIs", count: poiCount || 0, icon: Landmark, href: "/admin/pois" },
+    { label: "Itineraries", count: itinCount || 0, icon: Route, href: "/admin/itineraries" },
+    { label: "Users", count: userCount || 0, icon: Users, href: "/admin/users" },
   ];
 
   return (
@@ -31,17 +32,19 @@ export default async function AdminPage() {
       </h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="flex items-center gap-4 p-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-forest/5">
-                <stat.icon className="h-6 w-6 text-forest" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-forest">{stat.count}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <Link key={stat.label} href={stat.href}>
+            <Card className="transition-colors hover:border-forest/40">
+              <CardContent className="flex items-center gap-4 p-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-forest/5">
+                  <stat.icon className="h-6 w-6 text-forest" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-forest">{stat.count}</p>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
     </div>
